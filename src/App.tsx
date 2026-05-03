@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ThemeProvider } from './context/ThemeContext';
 import { FinancialProvider, useFinancialData } from './context/FinancialContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { BottomNav, TabType } from './components/BottomNav';
@@ -8,6 +9,8 @@ import { AddTransaction } from './screens/AddTransaction';
 import { GoalsInsights } from './screens/GoalsInsights';
 import { Reports } from './screens/Reports';
 import { Notifications } from './screens/Notifications';
+import { Opportunities } from './screens/Opportunities';
+import { EducationROI } from './screens/EducationROI';
 import { AuthScreen } from './screens/AuthScreen';
 import { Onboarding } from './screens/Onboarding';
 import { ProfileModal } from './components/ProfileModal';
@@ -47,7 +50,8 @@ const AppContent: React.FC = () => {
       case 'home': return <Dashboard />;
       case 'add': return <AddTransaction onComplete={() => setActiveTab('home')} />;
       case 'goals': return <GoalsInsights />;
-      case 'insights': return <Reports />;
+      case 'opportunities': return <Opportunities />;
+      case 'roi': return <EducationROI />;
       default: return <Dashboard />;
     }
   };
@@ -57,7 +61,8 @@ const AppContent: React.FC = () => {
     switch (activeTab) {
       case 'add': return "New Transaction";
       case 'goals': return "Goals";
-      case 'insights': return "Insights";
+      case 'opportunities': return "Opportunities";
+      case 'roi': return "Academic ROI";
       default: return "PocketIQ";
     }
   };
@@ -110,10 +115,12 @@ const AppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <FinancialProvider>
-      <ErrorBoundary>
-        <AppContent />
-      </ErrorBoundary>
-    </FinancialProvider>
+    <ThemeProvider>
+      <FinancialProvider>
+        <ErrorBoundary>
+          <AppContent />
+        </ErrorBoundary>
+      </FinancialProvider>
+    </ThemeProvider>
   );
 }

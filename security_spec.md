@@ -1,4 +1,4 @@
-# RocketIQ Security Specification
+# PocketIQ Security Specification
 
 ## 1. Data Invariants
 - A UserProfile can only be created by the authenticated user with a matching UID.

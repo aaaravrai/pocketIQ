@@ -12,6 +12,21 @@
         "totalBalance": { "type": "number" },
         "monthlyAllowance": { "type": "number" },
         "onboarded": { "type": "boolean" },
+        "minBalanceThreshold": { "type": "number" },
+        "dailySpendLimit": { "type": "number" },
+        "isLowBalanceEnabled": { "type": "boolean" },
+        "isDailySpendEnabled": { "type": "boolean" },
+        "streakCount": { "type": "number" },
+        "lastActiveDate": { "type": "string" },
+        "badges": { "type": "array", "items": { "type": "string" } },
+        "educationROI": {
+          "type": "object",
+          "properties": {
+            "semesterFees": { "type": "number" },
+            "booksCost": { "type": "number" },
+            "otherAcademicCosts": { "type": "number" }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
@@ -44,6 +59,30 @@
         "deadline": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "targetAmount", "currentAmount"]
+    },
+    "SplitBill": {
+      "title": "Split Bill",
+      "description": "A shared expense split among roommates.",
+      "type": "object",
+      "properties": {
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "payerId": { "type": "string" },
+        "roommates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "email": { "type": "string", "format": "email" },
+              "amount": { "type": "number" },
+              "settled": { "type": "boolean" }
+            }
+          }
+        }
+      },
+      "required": ["amount", "description", "date", "roommates", "payerId"]
     }
   },
   "firestore": {
@@ -58,6 +97,10 @@
     "users/{userId}/goals/{goalId}": {
       "schema": "Goal",
       "description": "Subcollection of user savings goals."
+    },
+    "users/{userId}/splitBills/{billId}": {
+      "schema": "SplitBill",
+      "description": "Subcollection of shared expenses."
     }
   }
 }

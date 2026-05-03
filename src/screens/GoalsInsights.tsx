@@ -90,8 +90,8 @@ const GoalModal: React.FC<{ goal?: Goal; onClose: () => void }> = ({ goal, onClo
                   className={cn(
                     "flex items-center justify-center p-3 rounded-xl border transition-all active:scale-90",
                     selectedIcon === id 
-                      ? "bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-600/20" 
-                      : "bg-white/5 border-white/10 text-on-surface-variant hover:border-white/20"
+                      ? "bg-primary border-primary text-white shadow-lg shadow-primary/20" 
+                      : "bg-on-surface/5 border-on-surface/10 text-on-surface-variant hover:border-on-surface/20"
                   )}
                 >
                   <Icon size={20} />
@@ -106,7 +106,7 @@ const GoalModal: React.FC<{ goal?: Goal; onClose: () => void }> = ({ goal, onClo
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-white/5 p-4 rounded-xl border border-white/10 focus:border-blue-500 focus:ring-0 text-sm font-medium transition-colors"
+              className="w-full bg-on-surface/5 p-4 rounded-xl border border-on-surface/10 focus:border-primary focus:ring-0 text-sm font-medium transition-colors"
               placeholder="e.g. New Laptop"
             />
           </div>
@@ -114,8 +114,8 @@ const GoalModal: React.FC<{ goal?: Goal; onClose: () => void }> = ({ goal, onClo
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-on-surface-variant uppercase tracking-widest pl-1">Target</label>
-              <div className="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/10 focus-within:border-blue-500 transition-colors">
-                <span className="text-sm font-bold text-blue-500">₹</span>
+              <div className="flex items-center gap-2 bg-on-surface/5 p-3 rounded-xl border border-on-surface/10 focus-within:border-primary transition-colors">
+                <span className="text-sm font-bold text-primary">₹</span>
                 <input 
                   type="number"
                   value={targetAmount}
@@ -127,8 +127,8 @@ const GoalModal: React.FC<{ goal?: Goal; onClose: () => void }> = ({ goal, onClo
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-on-surface-variant uppercase tracking-widest pl-1">Saved</label>
-              <div className="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/10 focus-within:border-blue-500 transition-colors">
-                <span className="text-sm font-bold text-secondary">₹</span>
+              <div className="flex items-center gap-2 bg-on-surface/5 p-3 rounded-xl border border-on-surface/10 focus-within:border-primary transition-colors">
+                <span className="text-sm font-bold text-emerald-500">₹</span>
                 <input 
                   type="number"
                   value={currentAmount}
@@ -142,13 +142,13 @@ const GoalModal: React.FC<{ goal?: Goal; onClose: () => void }> = ({ goal, onClo
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-on-surface-variant uppercase tracking-widest pl-1">Deadline (Optional)</label>
-            <div className="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/10 focus-within:border-blue-500 transition-colors">
+            <div className="flex items-center gap-2 bg-on-surface/5 p-3 rounded-xl border border-on-surface/10 focus-within:border-primary transition-colors">
               <Calendar className="text-on-surface-variant" size={18} />
               <input 
                 type="date"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
-                className="bg-transparent border-none focus:ring-0 text-sm font-bold w-full p-0 [color-scheme:dark]"
+                className="bg-transparent border-none focus:ring-0 text-sm font-bold w-full p-0 [color-scheme:light] dark:[color-scheme:dark]"
               />
             </div>
           </div>
@@ -158,7 +158,7 @@ const GoalModal: React.FC<{ goal?: Goal; onClose: () => void }> = ({ goal, onClo
           <button 
             onClick={save}
             disabled={isSubmitting || !title.trim()}
-            className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
+            className="w-full bg-primary hover:opacity-90 py-4 rounded-2xl font-black text-white flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 uppercase tracking-widest"
           >
             {isSubmitting ? 'Processing...' : (goal ? 'Save Changes' : 'Create Goal')} <Check size={20} />
           </button>
@@ -166,7 +166,7 @@ const GoalModal: React.FC<{ goal?: Goal; onClose: () => void }> = ({ goal, onClo
           {goal && (
             <button 
               onClick={handleDelete}
-              className="w-full bg-white/5 hover:bg-error/10 text-on-surface-variant hover:text-error py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all text-xs"
+              className="w-full bg-on-surface/5 hover:bg-red-500/10 text-on-surface-variant hover:text-red-500 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all text-xs uppercase tracking-widest"
             >
               <Trash2 size={16} /> Delete Goal
             </button>
@@ -196,14 +196,14 @@ export const GoalsInsights: React.FC = () => {
       
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-2xl font-bold text-on-surface">Goals & Insights</h1>
-          <p className="text-xs text-on-primary-container">Strategic tracking for your financial future.</p>
+          <h1 className="text-3xl font-black text-on-surface tracking-tight">Goals & Insights</h1>
+          <p className="text-xs font-bold text-primary uppercase tracking-[0.2em] mt-1 pl-0.5">Strategic Future</p>
         </div>
         <button 
           onClick={() => setIsAddingGoal(true)}
-          className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-600/30 active:scale-90 transition-transform"
+          className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center text-white shadow-xl shadow-primary/20 active:scale-90 transition-transform"
         >
-          <Plus size={24} />
+          <Plus size={28} />
         </button>
       </div>
 
@@ -227,14 +227,14 @@ export const GoalsInsights: React.FC = () => {
                 <div className="space-y-1 flex-1">
                   <div className="flex items-center gap-2">
                     <span className={cn(
-                      "text-[10px] uppercase tracking-wider font-bold",
-                      isCompleted ? "text-emerald-400" : (isOverdue ? "text-error" : "text-on-primary-container")
+                      "text-[10px] uppercase tracking-[0.15em] font-black",
+                      isCompleted ? "text-emerald-500" : (isOverdue ? "text-red-500" : "text-primary")
                     )}>
                       {isCompleted ? 'Goal Achieved' : (isOverdue ? 'Overdue Goal' : 'Active Goal')}
                     </span>
                     <button 
                       onClick={() => setEditingGoal(goal)}
-                      className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-blue-400 hover:bg-blue-400/10 rounded-full"
+                      className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:bg-primary/10 rounded-full"
                       title="Edit Goal"
                     >
                       <Edit2 size={12} />
@@ -243,15 +243,15 @@ export const GoalsInsights: React.FC = () => {
                   <h2 
                     onClick={() => setEditingGoal(goal)}
                     className={cn(
-                      "text-lg font-bold transition-colors cursor-pointer leading-tight",
-                      isCompleted ? "text-emerald-400" : "text-on-surface hover:text-blue-400"
+                      "text-xl font-black transition-colors cursor-pointer leading-none tracking-tight",
+                      isCompleted ? "text-emerald-500" : "text-on-surface hover:text-primary"
                     )}
                   >
                     {goal.title}
                   </h2>
                   <p className={cn(
-                    "text-[10px] font-medium",
-                    isCompleted ? "text-emerald-400/80" : "text-secondary"
+                    "text-[10px] font-bold uppercase tracking-wider",
+                    isCompleted ? "text-emerald-500/80" : "text-on-surface-variant"
                   )}>
                     {isCompleted 
                       ? 'Target Reached! 🎉' 
@@ -262,14 +262,14 @@ export const GoalsInsights: React.FC = () => {
                 </div>
                 <div 
                   onClick={() => setEditingGoal(goal)}
-                  className="relative w-14 h-14 cursor-pointer"
+                  className="relative w-16 h-16 cursor-pointer"
                 >
                   <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
-                    <circle className="text-white/10" cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3" />
+                    <circle className="text-on-surface/5" cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="4" />
                     <motion.circle 
                       cx="18" cy="18" r="16" fill="none" 
-                      stroke={isCompleted ? "#34d399" : (goal.color || "#3b82f6")} 
-                      strokeWidth="3" 
+                      stroke={isCompleted ? "#10b981" : "#6366f1"} 
+                      strokeWidth="4" 
                       initial={{ strokeDasharray: "0, 100" }}
                       animate={{ strokeDasharray: `${percent}, 100` }}
                       strokeLinecap="round"
@@ -277,39 +277,45 @@ export const GoalsInsights: React.FC = () => {
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className={cn(
-                      "p-2 rounded-full",
-                      isCompleted ? "bg-emerald-400/10 text-emerald-400" : "bg-blue-500/10"
+                      "p-2.5 rounded-2xl",
+                      isCompleted ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" : "bg-primary/10 text-primary border border-primary/20"
                     )}>
                       {isCompleted ? (
-                        <Check size={18} strokeWidth={3} />
+                        <Check size={20} strokeWidth={3} />
                       ) : (
                         GOAL_ICONS[goal.icon as keyof typeof GOAL_ICONS] ? (
                           React.createElement(GOAL_ICONS[goal.icon as keyof typeof GOAL_ICONS], { 
-                            size: 16, 
-                            className: isCompleted ? "text-emerald-400" : "text-blue-500" 
+                            size: 20, 
+                            className: isCompleted ? "text-emerald-500" : "text-primary" 
                           })
                         ) : (
-                          <Target size={18} className="text-blue-500" />
+                          <Target size={20} className="text-primary" />
                         )
                       )}
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="mt-4">
+              <div className="mt-6">
                 <div 
                   onClick={() => setEditingGoal(goal)}
-                  className="flex justify-between text-[10px] text-on-primary-container mb-1 cursor-pointer hover:text-on-surface transition-colors"
+                  className="flex justify-between text-[11px] font-black uppercase tracking-wider text-on-surface-variant mb-2 cursor-pointer hover:text-on-surface transition-colors"
                 >
-                  <span>{formatCurrency(goal.currentAmount)} of {formatCurrency(goal.targetAmount)}</span>
+                  <span>{formatCurrency(goal.currentAmount)}</span>
+                  <span>{formatCurrency(goal.targetAmount)}</span>
                 </div>
                 <div 
                   onClick={() => setEditingGoal(goal)}
-                  className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden cursor-pointer"
+                  className="h-2 w-full bg-on-surface/5 rounded-full overflow-hidden cursor-pointer"
                 >
-                  <div 
-                    className="h-full bg-blue-500 transition-all duration-1000" 
-                    style={{ width: `${percent}%` }} 
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${percent}%` }}
+                    transition={{ duration: 1.5, ease: "anticipate" }}
+                    className={cn(
+                      "h-full transition-all",
+                      isCompleted ? "bg-emerald-500" : "bg-primary shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                    )} 
                   />
                 </div>
               </div>

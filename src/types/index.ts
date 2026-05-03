@@ -28,6 +28,7 @@ export interface Budget {
 }
 
 export interface UserProfile {
+  uid: string;
   name: string;
   email: string;
   avatar?: string;
@@ -35,4 +36,35 @@ export interface UserProfile {
   totalBalance: number;
   monthlyAllowance: number;
   onboarded?: boolean;
+  minBalanceThreshold?: number;
+  dailySpendLimit?: number;
+  isLowBalanceEnabled?: boolean;
+  isDailySpendEnabled?: boolean;
+  streakCount?: number;
+  lastActiveDate?: string;
+  badges?: string[];
+  educationROI?: {
+    semesterFees: number;
+    booksCost: number;
+    otherAcademicCosts: number;
+  };
+}
+
+export interface SplitBill {
+  id: string;
+  amount: number;
+  description: string;
+  date: string;
+  roommates: { name: string; email?: string; amount: number; settled: boolean }[];
+  payerId: string;
+}
+
+export interface Scholarship {
+  id: string;
+  title: string;
+  provider: string;
+  amount: number;
+  deadline: string;
+  link: string;
+  bookmarked?: boolean;
 }
