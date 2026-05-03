@@ -1,8 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800;900&family=Lato:wght@300;400;700;900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Urbanist", "Lato", "Outfit", ui-sans-serif, system-ui, sans-serif;
   
   /* Atomic Colors */
   --color-primary: var(--primary);
@@ -15,7 +16,12 @@
   /* Legacy/Support Colors */
   --color-secondary: #10B981;
   --color-error: #EF4444;
-  --color-on-primary-container: var(--on-surface-variant);
+  /* Custom Animations */
+  @keyframes pulse-subtle {
+    0%, 100% { opacity: 1; border-color: rgba(244, 63, 94, 0.4); }
+    50% { opacity: 0.8; border-color: rgba(244, 63, 94, 0.8); }
+  }
+  --animate-pulse-subtle: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @layer base {

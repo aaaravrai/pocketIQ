@@ -4,13 +4,12 @@ import { FinancialProvider, useFinancialData } from './context/FinancialContext'
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { BottomNav, TabType } from './components/BottomNav';
 import { TopAppBar } from './components/TopAppBar';
+import { Logo } from './components/Logo';
 import { Dashboard } from './screens/Dashboard';
 import { AddTransaction } from './screens/AddTransaction';
 import { GoalsInsights } from './screens/GoalsInsights';
-import { Reports } from './screens/Reports';
 import { Notifications } from './screens/Notifications';
-import { Opportunities } from './screens/Opportunities';
-import { EducationROI } from './screens/EducationROI';
+import { Transactions } from './screens/Transactions';
 import { AuthScreen } from './screens/AuthScreen';
 import { Onboarding } from './screens/Onboarding';
 import { ProfileModal } from './components/ProfileModal';
@@ -27,10 +26,11 @@ const AppContent: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <motion.div 
-          animate={{ scale: [1, 1.2, 1], rotate: 360 }}
+          animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
           transition={{ duration: 2, repeat: Infinity }}
-          className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"
-        />
+        >
+          <Logo withText size="lg" />
+        </motion.div>
       </div>
     );
   }
@@ -44,25 +44,20 @@ const AppContent: React.FC = () => {
   }
 
   const renderContent = () => {
-    if (showNotifications) return <Notifications />;
-    
     switch (activeTab) {
       case 'home': return <Dashboard />;
       case 'add': return <AddTransaction onComplete={() => setActiveTab('home')} />;
       case 'goals': return <GoalsInsights />;
-      case 'opportunities': return <Opportunities />;
-      case 'roi': return <EducationROI />;
+      case 'transactions': return <Transactions />;
       default: return <Dashboard />;
     }
   };
 
   const getPageTitle = () => {
-    if (showNotifications) return "Alerts";
     switch (activeTab) {
       case 'add': return "New Transaction";
       case 'goals': return "Goals";
-      case 'opportunities': return "Opportunities";
-      case 'roi': return "Academic ROI";
+      case 'transactions': return "Transaction Logs";
       default: return "PocketIQ";
     }
   };
@@ -81,11 +76,17 @@ const AppContent: React.FC = () => {
       />
       
       {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+      
+      <AnimatePresence>
+        {showNotifications && (
+          <Notifications onClose={() => setShowNotifications(false)} />
+        )}
+      </AnimatePresence>
 
       <main className="pt-24 px-5 max-w-md mx-auto">
         <AnimatePresence mode="wait">
           <motion.div
-            key={showNotifications ? 'notifications' : activeTab}
+            key={activeTab}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -96,15 +97,13 @@ const AppContent: React.FC = () => {
         </AnimatePresence>
       </main>
 
-      {!showNotifications && (
-        <BottomNav 
-          activeTab={activeTab} 
-          onTabChange={(tab) => {
-            setActiveTab(tab);
-            setShowNotifications(false);
-          }} 
-        />
-      )}
+      <BottomNav 
+        activeTab={activeTab} 
+        onTabChange={(tab) => {
+          setActiveTab(tab);
+          setShowNotifications(false);
+        }} 
+      />
 
       {/* Decorative Elements */}
       <div className="fixed top-[-10%] right-[-10%] w-[300px] h-[300px] bg-blue-600/5 rounded-full blur-[120px] -z-10 pointer-events-none" />

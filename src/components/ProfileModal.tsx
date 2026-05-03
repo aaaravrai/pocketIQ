@@ -214,7 +214,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
           <div className="space-y-2">
             <label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] pl-1">Operational Badges</label>
             <div className="flex flex-wrap gap-2">
-              {['Budget Master', 'First ₹1k Saved', 'ROI Specialist'].map((badge) => {
+              {['Budget Master', 'First ₹1k Saved'].map((badge) => {
                 const earned = userProfile?.badges?.includes(badge);
                 return (
                   <div 

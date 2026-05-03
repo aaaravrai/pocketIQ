@@ -1,8 +1,8 @@
 import React from 'react';
-import { Home, PlusCircle, Target, PieChart, Trophy, GraduationCap } from 'lucide-react';
+import { Home, PlusCircle, Target, PieChart, Trophy, Zap, ReceiptText } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-export type TabType = 'home' | 'add' | 'goals' | 'opportunities' | 'roi';
+export type TabType = 'home' | 'add' | 'goals' | 'transactions';
 
 interface BottomNavProps {
   activeTab: TabType;
@@ -14,8 +14,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
     { id: 'home' as TabType, label: 'Home', icon: Home },
     { id: 'add' as TabType, label: 'Add', icon: PlusCircle },
     { id: 'goals' as TabType, label: 'Goals', icon: Target },
-    { id: 'opportunities' as TabType, label: 'Opps', icon: Trophy },
-    { id: 'roi' as TabType, label: 'Edu', icon: GraduationCap },
+    { id: 'transactions' as TabType, label: 'History', icon: ReceiptText },
   ];
 
   return (

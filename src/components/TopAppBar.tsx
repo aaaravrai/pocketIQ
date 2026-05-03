@@ -14,33 +14,16 @@ interface TopAppBarProps {
 }
 
 export const TopAppBar: React.FC<TopAppBarProps> = ({ title, onSearch, onNotifications, onProfile }) => {
-  const { userProfile, dailySpent, monthlySpent } = useFinancialData();
+  const { userProfile, dailySpent, monthlySpent, notifications } = useFinancialData();
   const { theme, toggleTheme } = useTheme();
 
   const alertCount = React.useMemo(() => {
-    let count = 0;
-    if (!userProfile) return 0;
-    
-    // 1. Low Balance
-    if (userProfile.isLowBalanceEnabled && userProfile.totalBalance < (userProfile.minBalanceThreshold || 0)) {
-      count++;
-    }
-    // 2. Daily Spend Limit
-    if (userProfile.isDailySpendEnabled && dailySpent > (userProfile.dailySpendLimit || 0)) {
-      count++;
-    }
-    // 3. Monthly Budget Breach
-    if (monthlySpent > userProfile.monthlyAllowance) {
-      count++;
-    }
-    
-    return count;
-  }, [userProfile, dailySpent, monthlySpent]);
+    return notifications.filter(n => !n.isRead).length;
+  }, [notifications]);
 
   const hasCriticalAlert = React.useMemo(() => {
-    if (!userProfile) return false;
-    return (userProfile.isLowBalanceEnabled && userProfile.totalBalance < (userProfile.minBalanceThreshold || 0));
-  }, [userProfile]);
+    return notifications.some(n => !n.isRead && n.type === 'critical');
+  }, [notifications]);
 
   return (
     <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-5 h-20 glass-card bg-surface/80 rounded-none border-b shadow-none">
@@ -66,11 +49,15 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({ title, onSearch, onNotific
           </button>
         )}
         <div className="flex flex-col">
-          <h1 className="text-xl font-black text-on-surface tracking-tighter leading-none">
-            {title || "PocketIQ"}
-          </h1>
+          {(!title || title === "PocketIQ") ? (
+            <Logo withText size="sm" />
+          ) : (
+            <h1 className="text-xl font-black text-on-surface tracking-tighter leading-none">
+              {title}
+            </h1>
+          )}
           {(!title || title === "PocketIQ") && (
-            <span className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">Smart Finance</span>
+            <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.2em] ml-7">Smart Finance</span>
           )}
         </div>
       </div>
@@ -127,18 +114,20 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({ title, onSearch, onNotific
                 animate={{ 
                   scale: 1, 
                   opacity: 1,
-                  filter: hasCriticalAlert ? ['brightness(1)', 'brightness(1.5)', 'brightness(1)'] : 'brightness(1)'
+                  filter: hasCriticalAlert ? ['brightness(1)', 'brightness(1.5)', 'brightness(1)'] : 'brightness(1)',
+                  boxShadow: hasCriticalAlert ? ['0 0 0px rgba(244,63,94,0)', '0 0 10px rgba(244,63,94,0.5)', '0 0 0px rgba(244,63,94,0)'] : 'none'
                 }}
                 exit={{ scale: 0, opacity: 0 }}
                 transition={{ 
                   type: 'spring', 
                   stiffness: 500, 
                   damping: 15,
-                  filter: { repeat: Infinity, duration: 2 }
+                  filter: { repeat: Infinity, duration: 1.5 },
+                  boxShadow: { repeat: Infinity, duration: 1.5 }
                 }}
                 className={cn(
                   "absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black text-white shadow-lg",
-                  hasCriticalAlert ? "bg-red-500 shadow-red-500/40" : "bg-primary shadow-primary/40"
+                  hasCriticalAlert ? "bg-rose-500 shadow-rose-500/40" : "bg-emerald-500 shadow-emerald-500/40"
                 )}
               >
                 <motion.span

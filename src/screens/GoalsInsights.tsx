@@ -8,7 +8,7 @@ import { Goal } from '../types';
 import { cn } from '../lib/utils';
 import { GOAL_ICONS } from '../constants';
 import { formatDistanceToNow, isPast } from 'date-fns';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 const MOCK_LINE_DATA = [
   { day: 'Mon', thisWeek: 400, lastWeek: 300 },
@@ -115,7 +115,7 @@ const GoalModal: React.FC<{ goal?: Goal; onClose: () => void }> = ({ goal, onClo
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-on-surface-variant uppercase tracking-widest pl-1">Target</label>
               <div className="flex items-center gap-2 bg-on-surface/5 p-3 rounded-xl border border-on-surface/10 focus-within:border-primary transition-colors">
-                <span className="text-sm font-bold text-primary">₹</span>
+                <span className="text-sm font-bold text-primary">₹ </span>
                 <input 
                   type="number"
                   value={targetAmount}
@@ -128,7 +128,7 @@ const GoalModal: React.FC<{ goal?: Goal; onClose: () => void }> = ({ goal, onClo
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-on-surface-variant uppercase tracking-widest pl-1">Saved</label>
               <div className="flex items-center gap-2 bg-on-surface/5 p-3 rounded-xl border border-on-surface/10 focus-within:border-primary transition-colors">
-                <span className="text-sm font-bold text-emerald-500">₹</span>
+                <span className="text-sm font-bold text-emerald-500">₹ </span>
                 <input 
                   type="number"
                   value={currentAmount}
@@ -177,13 +177,109 @@ const GoalModal: React.FC<{ goal?: Goal; onClose: () => void }> = ({ goal, onClo
   );
 };
 
+const FundGoalModal: React.FC<{ goal: Goal; onClose: (msg?: string) => void }> = ({ goal, onClose }) => {
+  const { fundGoal, userProfile } = useFinancialData();
+  const [amount, setAmount] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleFund = async () => {
+    const fundAmount = parseFloat(amount);
+    if (isNaN(fundAmount) || fundAmount <= 0) return;
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await fundGoal(goal.id, fundAmount);
+      onClose(`₹${fundAmount} moved to ${goal.title} successfully!`);
+    } catch (e: any) {
+      setError(e.message || "Failed to fund goal");
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const currentBalance = userProfile?.totalBalance || 0;
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+      <GlassCard className="w-full max-w-[280px] p-6 space-y-6 relative border-primary/20 shadow-2xl">
+        <div className="text-center space-y-1">
+          <h3 className="text-base font-black text-on-surface uppercase tracking-tight">Fund this Goal</h3>
+          <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">{goal.title}</p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex justify-between items-center px-1">
+              <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Amount</label>
+              <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Bal: ₹{currentBalance.toFixed(0)}</span>
+            </div>
+            <div className="flex items-center gap-2 bg-on-surface/5 p-4 rounded-xl border border-on-surface/10 focus-within:border-primary transition-colors">
+              <span className="text-base font-black text-primary">₹</span>
+              <input 
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                autoFocus
+                className="bg-transparent border-none focus:ring-0 text-xl font-black w-full p-0 tracking-tighter"
+                placeholder="0"
+              />
+            </div>
+            {error && (
+              <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest text-center mt-1">
+                {error}
+              </p>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <button 
+              onClick={() => onClose()}
+              disabled={isSubmitting}
+              className="flex-1 bg-white/5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-on-surface-variant hover:bg-white/10 transition-all border border-on-surface/5"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleFund}
+              disabled={isSubmitting || !amount || parseFloat(amount) <= 0}
+              className="flex-1 bg-primary py-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-white shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      </GlassCard>
+    </div>
+  );
+};
+
 export const GoalsInsights: React.FC = () => {
   const { goals } = useFinancialData();
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [fundingGoal, setFundingGoal] = useState<Goal | null>(null);
   const [isAddingGoal, setIsAddingGoal] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-500">
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 20, x: '-50%' }}
+            className="fixed bottom-24 left-1/2 z-[200] w-[90%] max-w-sm"
+          >
+            <GlassCard className="bg-emerald-600 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-center text-center font-bold text-[10px] uppercase tracking-[0.2em] border border-white/20">
+              {toast}
+            </GlassCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {(editingGoal || isAddingGoal) && (
         <GoalModal 
           goal={editingGoal || undefined} 
@@ -191,6 +287,19 @@ export const GoalsInsights: React.FC = () => {
             setEditingGoal(null);
             setIsAddingGoal(false);
           }} 
+        />
+      )}
+
+      {fundingGoal && (
+        <FundGoalModal 
+          goal={fundingGoal}
+          onClose={(msg) => {
+            setFundingGoal(null);
+            if (msg) {
+              setToast(msg);
+              setTimeout(() => setToast(null), 3000);
+            }
+          }}
         />
       )}
       
@@ -218,9 +327,8 @@ export const GoalsInsights: React.FC = () => {
           return (
             <GlassCard 
               key={goal.id} 
-              className="p-6 flex flex-col justify-between min-h-[180px] group cursor-pointer"
-              whileHover={{ scale: 0.98, rotateX: 2, rotateY: -2, z: -10 }}
-              whileTap={{ scale: 0.96 }}
+              className="p-6 flex flex-col justify-between min-h-[220px] group border-primary/10"
+              whileHover={{ scale: 0.98, translateY: -2 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
             >
               <div className="flex justify-between items-start">
@@ -234,35 +342,44 @@ export const GoalsInsights: React.FC = () => {
                     </span>
                     <button 
                       onClick={() => setEditingGoal(goal)}
-                      className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:bg-primary/10 rounded-full"
+                      className="p-1 opacity-10 sm:opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:bg-primary/10 rounded-full"
                       title="Edit Goal"
                     >
                       <Edit2 size={12} />
                     </button>
                   </div>
                   <h2 
-                    onClick={() => setEditingGoal(goal)}
                     className={cn(
-                      "text-xl font-black transition-colors cursor-pointer leading-none tracking-tight",
-                      isCompleted ? "text-emerald-500" : "text-on-surface hover:text-primary"
+                      "text-xl font-black transition-colors leading-none tracking-tight",
+                      isCompleted ? "text-emerald-500" : "text-on-surface"
                     )}
                   >
                     {goal.title}
                   </h2>
-                  <p className={cn(
-                    "text-[10px] font-bold uppercase tracking-wider",
-                    isCompleted ? "text-emerald-500/80" : "text-on-surface-variant"
-                  )}>
-                    {isCompleted 
-                      ? 'Target Reached! 🎉' 
-                      : (deadlineDate 
-                          ? `${isOverdue ? 'Passed' : ''} ${formatDistanceToNow(deadlineDate, { addSuffix: true })}` 
-                          : '3 months away at current rate')}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className={cn(
+                      "text-[10px] font-bold uppercase tracking-wider",
+                      isCompleted ? "text-emerald-500/80" : "text-on-surface-variant"
+                    )}>
+                      {isCompleted 
+                        ? 'Target Reached! 🚀' 
+                        : (deadlineDate 
+                            ? `${isOverdue ? 'Passed' : ''} ${formatDistanceToNow(deadlineDate, { addSuffix: true })}` 
+                            : 'Strategic Accumulation')}
+                    </p>
+                    {isCompleted && (
+                      <motion.span 
+                        animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
+                        transition={{ repeat: Infinity, duration: 2 }}
+                        className="text-xs"
+                      >
+                        🎉
+                      </motion.span>
+                    )}
+                  </div>
                 </div>
                 <div 
-                  onClick={() => setEditingGoal(goal)}
-                  className="relative w-16 h-16 cursor-pointer"
+                  className="relative w-16 h-16 flex-shrink-0"
                 >
                   <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
                     <circle className="text-on-surface/5" cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="4" />
@@ -296,18 +413,13 @@ export const GoalsInsights: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className="mt-6">
-                <div 
-                  onClick={() => setEditingGoal(goal)}
-                  className="flex justify-between text-[11px] font-black uppercase tracking-wider text-on-surface-variant mb-2 cursor-pointer hover:text-on-surface transition-colors"
-                >
+
+              <div className="mt-4">
+                <div className="flex justify-between text-[11px] font-black uppercase tracking-wider text-on-surface-variant mb-2">
                   <span>{formatCurrency(goal.currentAmount)}</span>
                   <span>{formatCurrency(goal.targetAmount)}</span>
                 </div>
-                <div 
-                  onClick={() => setEditingGoal(goal)}
-                  className="h-2 w-full bg-on-surface/5 rounded-full overflow-hidden cursor-pointer"
-                >
+                <div className="h-2 w-full bg-on-surface/5 rounded-full overflow-hidden">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${percent}%` }}
@@ -318,6 +430,21 @@ export const GoalsInsights: React.FC = () => {
                     )} 
                   />
                 </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-on-surface/5 flex gap-2">
+                {!isCompleted ? (
+                  <button 
+                    onClick={() => setFundingGoal(goal)}
+                    className="flex-1 bg-primary/10 text-primary border border-primary/20 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2"
+                  >
+                    <Plus size={14} /> Add Funds
+                  </button>
+                ) : (
+                  <div className="flex-1 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+                    <Rocket size={14} /> Target Reached
+                  </div>
+                )}
               </div>
             </GlassCard>
           );
@@ -371,10 +498,10 @@ export const GoalsInsights: React.FC = () => {
           <Target className="text-blue-400" size={18} />
           <div className="flex flex-col">
             <span className="text-[8px] uppercase text-on-primary-container font-black leading-none">Primary Target</span>
-            <span className="text-sm font-bold text-on-surface">Save ₹2,000</span>
+            <span className="text-sm font-bold text-blue-400 leading-none">Target: {formatCurrency(2000)}</span>
           </div>
           <div className="h-8 w-[1px] bg-white/10 mx-1" />
-          <div className="text-secondary font-bold text-sm">+₹42.50</div>
+          <div className="text-secondary font-bold text-sm">+{formatCurrency(42.50)}</div>
         </GlassCard>
       </div>
     </div>

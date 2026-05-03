@@ -18,12 +18,17 @@ const CATEGORIES: { id: TransactionCategory; icon: any; label: string }[] = [
 ];
 
 export const AddTransaction: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
-  const { addTransaction } = useFinancialData();
+  const { addTransaction, userProfile } = useFinancialData();
   const [type, setType] = useState<TransactionType>('expense');
   const [amount, setAmount] = useState('0');
   const [category, setCategory] = useState<TransactionCategory>('Food');
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const currentBalance = userProfile?.totalBalance || 0;
+  const numAmount = parseFloat(amount);
+  const isInsufficient = type === 'expense' && numAmount > currentBalance;
 
   const handleTypeChange = (newType: TransactionType) => {
     setType(newType);
@@ -72,7 +77,14 @@ export const AddTransaction: React.FC<{ onComplete: () => void }> = ({ onComplet
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) return;
 
+    if (type === 'expense' && numAmount > currentBalance) {
+      setError(`Insufficient Funds! Your current balance is only ₹${currentBalance.toFixed(2)}.`);
+      setTimeout(() => setError(null), 4000);
+      return;
+    }
+
     setIsSubmitting(true);
+    setError(null);
     try {
       let finalDescription = note.trim();
       let finalCategory = category;
@@ -121,16 +133,28 @@ export const AddTransaction: React.FC<{ onComplete: () => void }> = ({ onComplet
 
       {/* Amount Display */}
       <div className="flex flex-col items-center justify-center py-8">
-        <span className="text-xs text-on-primary-container font-bold uppercase tracking-widest mb-2">Amount</span>
+        <span className="text-xs text-on-surface-variant font-bold uppercase tracking-widest mb-2 opacity-60">Input Amount</span>
         <div className="flex items-center">
-          <span className="text-4xl font-bold text-blue-500 mr-1">₹</span>
-          <span className="text-5xl font-bold text-on-surface tracking-tight">{amount}</span>
+          <span className={cn("text-4xl font-black mr-2", isInsufficient ? "text-red-500" : "text-primary")}>₹ </span>
+          <span className={cn("text-5xl font-black tracking-tighter transition-colors", isInsufficient ? "text-red-500" : "text-on-surface")}>{amount}</span>
           <motion.span 
             animate={{ opacity: [0, 1, 0] }}
             transition={{ duration: 1, repeat: Infinity }}
-            className="w-1 h-12 bg-blue-500/40 rounded-full ml-1" 
+            className={cn("w-1 h-12 rounded-full ml-1", isInsufficient ? "bg-red-500/40" : "bg-blue-500/40")} 
           />
         </div>
+        <AnimatePresence>
+          {isInsufficient && (
+            <motion.p 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-[10px] font-black text-red-500 uppercase tracking-widest mt-4"
+            >
+              Exceeds Available Balance (₹{currentBalance.toFixed(2)})
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Category Grid (Only for Expenses) */}
@@ -187,19 +211,36 @@ export const AddTransaction: React.FC<{ onComplete: () => void }> = ({ onComplet
       </div>
 
       {/* Save Button */}
-      <button
-        disabled={isSubmitting || parseFloat(amount) <= 0}
-        onClick={handleSubmit}
-        className={cn(
-          "w-full py-5 rounded-[24px] font-bold text-xl transition-all flex items-center justify-center gap-2 shadow-xl mb-8",
-          isSubmitting || parseFloat(amount) <= 0 
-            ? "bg-white/5 text-on-surface-variant opacity-50 cursor-not-allowed" 
-            : "bg-blue-600 text-white shadow-blue-600/30 active:scale-95"
-        )}
-      >
-        <span>{isSubmitting ? 'Processing...' : 'Save Transaction'}</span>
-        {!isSubmitting && <CheckCircle size={24} />}
-      </button>
+      <div className="px-1 sticky bottom-0 bg-background/80 backdrop-blur-xl pt-2 pb-8 -mx-1">
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-4"
+            >
+              <div className="glass-card bg-red-500/10 border border-red-500/20 p-3 rounded-xl flex items-center justify-center text-center">
+                <p className="text-[10px] font-black text-red-500 uppercase tracking-wider">{error}</p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
+        <button
+          disabled={isSubmitting || parseFloat(amount) <= 0 || isInsufficient}
+          onClick={handleSubmit}
+          className={cn(
+            "w-full py-5 rounded-[24px] font-bold text-xl transition-all flex items-center justify-center gap-2 shadow-xl",
+            isSubmitting || parseFloat(amount) <= 0 || isInsufficient
+              ? "bg-white/5 text-on-surface-variant opacity-50 cursor-not-allowed" 
+              : "bg-blue-600 text-white shadow-blue-600/30 active:scale-95"
+          )}
+        >
+          <span>{isSubmitting ? 'Processing...' : 'Save Transaction'}</span>
+          {!isSubmitting && <CheckCircle size={24} />}
+        </button>
+      </div>
     </div>
   );
 };

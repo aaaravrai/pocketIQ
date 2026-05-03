@@ -3,21 +3,35 @@ import { GlassCard } from '../components/GlassCard';
 import { X, Users, DollarSign, Plus, Trash2, Send } from 'lucide-react';
 import { useFinancialData } from '../context/FinancialContext';
 import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '../lib/utils';
 
 interface SplitBillModalProps {
   onClose: () => void;
 }
 
 export const SplitBillModal: React.FC<SplitBillModalProps> = ({ onClose }) => {
-  const { addSplitBill } = useFinancialData();
+  const { addSplitBill, userProfile } = useFinancialData();
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [roommates, setRoommates] = useState<{ name: string; email: string }[]>([]);
   const [newRoommate, setNewRoommate] = useState({ name: '', email: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  const currentBalance = userProfile?.totalBalance || 0;
+  const numAmount = parseFloat(amount.toString().replace(/[^\d.]/g, '')) || 0;
+  const isInsufficient = numAmount > currentBalance;
 
   const handleAddRoommate = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (newRoommate.name && newRoommate.email) {
+      if (!emailRegex.test(newRoommate.email)) {
+        setToastMessage("Invalid Gmail/Email format detected.");
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+        return;
+      }
       setRoommates([...roommates, newRoommate]);
       setNewRoommate({ name: '', email: '' });
     }
@@ -30,20 +44,46 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({ onClose }) => {
   const handleSubmit = async () => {
     if (!amount || !description || roommates.length === 0) return;
     
+    // Final validation
+    const numAmount = parseFloat(amount.toString().replace(/[^\d.]/g, ''));
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setToastMessage("Please enter a valid amount.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+      return;
+    }
+
+    if (numAmount > currentBalance) {
+      setToastMessage(`Insufficient Funds! Your current balance is only ₹${currentBalance.toFixed(2)}.`);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 4000);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const splitAmount = Number(amount) / (roommates.length + 1);
+      const splitAmount = numAmount / (roommates.length + 1);
       await addSplitBill({
         description,
-        amount: Number(amount),
+        amount: numAmount,
         roommates: roommates.map(r => ({
           ...r,
           amount: splitAmount,
           settled: false
         }))
       });
-      onClose();
-    } finally {
+      
+      setToastMessage(`Split recorded and notification sent to ${roommates[0].email}${roommates.length > 1 ? ' and others' : ''}!`);
+      setShowToast(true);
+      
+      setTimeout(() => {
+        onClose();
+      }, 2500);
+    } catch (e) {
+      console.error(e);
+      setToastMessage("Failed to initiate split. Mission logic error.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
       setIsSubmitting(false);
     }
   };
@@ -69,14 +109,22 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({ onClose }) => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] pl-1">Total Amount (₹)</label>
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] pl-1">Total Amount (₹)</label>
+              {isInsufficient && (
+                <span className="text-[8px] font-black text-red-500 uppercase tracking-widest animate-pulse">Low Funds</span>
+              )}
+            </div>
             <div className="relative">
-              <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={16} />
+              <span className={cn("absolute left-4 top-1/2 -translate-y-1/2 font-black text-sm transition-colors", isInsufficient ? "text-red-500" : "text-primary")}>₹ </span>
               <input 
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full bg-on-surface/5 h-12 pl-12 pr-4 rounded-xl border border-on-surface/10 focus:border-primary focus:ring-0 text-sm font-black transition-all"
+                className={cn(
+                  "w-full bg-on-surface/5 h-12 pl-12 pr-4 rounded-xl border focus:ring-0 text-sm font-black transition-all",
+                  isInsufficient ? "border-red-500 text-red-500" : "border-on-surface/10 focus:border-primary text-on-surface"
+                )}
                 placeholder="0.00"
               />
             </div>
@@ -133,12 +181,49 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({ onClose }) => {
 
         <button 
           onClick={handleSubmit}
-          disabled={isSubmitting || !amount || !description || roommates.length === 0}
-          className="w-full h-14 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+          disabled={isSubmitting || !amount || !description || roommates.length === 0 || isInsufficient}
+          className={cn(
+            "w-full h-14 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg",
+            isInsufficient 
+              ? "bg-red-500/20 text-red-500 border border-red-500/30 cursor-not-allowed" 
+              : "bg-primary text-white shadow-primary/20 disabled:opacity-50"
+          )}
         >
-          {isSubmitting ? 'Syncing...' : 'Initiate Split'} <Send size={16} />
+          {isSubmitting ? (
+            <>
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+              />
+              Sending Notification...
+            </>
+          ) : (
+            <>
+              Initiate Split <Send size={16} />
+            </>
+          )}
         </button>
       </GlassCard>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] w-[90%] max-w-sm"
+          >
+            <GlassCard className={cn(
+              "p-4 rounded-2xl shadow-2xl flex items-center justify-center text-center font-bold text-[10px] uppercase tracking-[0.2em] border border-white/20",
+              toastMessage.includes("Insufficient Funds") ? "bg-red-600 text-white" : "bg-primary text-white"
+            )}>
+              {toastMessage}
+            </GlassCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

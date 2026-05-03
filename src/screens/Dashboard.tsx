@@ -97,17 +97,17 @@ export const Dashboard: React.FC = () => {
         <GlassCard className="p-4 flex flex-col items-center justify-center text-center border-none">
           <ArrowDown className="text-emerald-500 mb-2" size={20} />
           <p className="text-[10px] text-on-surface-variant mb-0.5 font-bold uppercase tracking-tighter">In</p>
-          <p className="text-xs font-black text-on-surface">₹{formatCompactNumber(totalIn)}</p>
+          <p className="text-xs font-black text-on-surface">{formatCompactNumber(totalIn)}</p>
         </GlassCard>
         <GlassCard className="p-4 flex flex-col items-center justify-center text-center border-none">
           <ArrowUp className="text-red-500 mb-2" size={20} />
           <p className="text-[10px] text-on-surface-variant mb-0.5 font-bold uppercase tracking-tighter">Out</p>
-          <p className="text-xs font-black text-on-surface">₹{formatCompactNumber(totalOut)}</p>
+          <p className="text-xs font-black text-on-surface">{formatCompactNumber(totalOut)}</p>
         </GlassCard>
         <GlassCard className="p-4 flex flex-col items-center justify-center text-center border-none">
           <PiggyBank className="text-primary mb-2" size={20} />
           <p className="text-[10px] text-on-surface-variant mb-0.5 font-bold uppercase tracking-tighter">Saved</p>
-          <p className="text-xs font-black text-on-surface">₹{formatCompactNumber(totalSaved)}</p>
+          <p className="text-xs font-black text-on-surface">{formatCompactNumber(totalSaved)}</p>
         </GlassCard>
       </div>
 
@@ -136,7 +136,7 @@ export const Dashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-sm font-black text-on-surface leading-tight tracking-tight">{goals[0].title}</p>
-              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mt-0.5 pl-0.5">Target: ₹{formatCompactNumber(goals[0].targetAmount)}</p>
+              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mt-0.5 pl-0.5">Target: {formatCompactNumber(goals[0].targetAmount)}</p>
             </div>
           </div>
           <span className="text-sm font-black text-primary bg-primary/5 px-3 py-1.5 rounded-full">{formatCompactNumber(goals[0].currentAmount / goals[0].targetAmount * 100)}%</span>
@@ -170,7 +170,7 @@ export const Dashboard: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-black text-primary">₹{bill.roommates.reduce((s, r) => s + (r.settled ? 0 : r.amount), 0)}</p>
+                    <p className="text-xs font-black text-primary">{formatCurrency(bill.roommates.reduce((s, r) => s + (r.settled ? 0 : r.amount), 0))}</p>
                     <p className="text-[8px] font-black text-on-surface-variant uppercase tracking-tighter">Outstanding</p>
                   </div>
                 </div>
@@ -185,7 +185,7 @@ export const Dashboard: React.FC = () => {
                         r.settled ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-on-surface/5 border-on-surface/5 text-on-surface-variant hover:bg-primary/10 hover:border-primary/20"
                       )}
                     >
-                      {r.name} {r.settled ? '✓' : `₹${Math.round(r.amount)}`}
+                      {r.name} {r.settled ? '✓' : formatCurrency(r.amount)}
                     </button>
                   ))}
                 </div>

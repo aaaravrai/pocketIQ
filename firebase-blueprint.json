@@ -19,14 +19,6 @@
         "streakCount": { "type": "number" },
         "lastActiveDate": { "type": "string" },
         "badges": { "type": "array", "items": { "type": "string" } },
-        "educationROI": {
-          "type": "object",
-          "properties": {
-            "semesterFees": { "type": "number" },
-            "booksCost": { "type": "number" },
-            "otherAcademicCosts": { "type": "number" }
-          }
-        },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
@@ -83,6 +75,23 @@
         }
       },
       "required": ["amount", "description", "date", "roommates", "payerId"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A notification for the user regarding splits, alerts, or information.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["split", "alert", "info", "critical"] },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "isRead": { "type": "boolean" },
+        "senderName": { "type": "string" },
+        "senderId": { "type": "string" },
+        "amount": { "type": "number" },
+        "billId": { "type": "string" }
+      },
+      "required": ["type", "title", "message", "date", "isRead"]
     }
   },
   "firestore": {
@@ -101,6 +110,14 @@
     "users/{userId}/splitBills/{billId}": {
       "schema": "SplitBill",
       "description": "Subcollection of shared expenses."
+    },
+    "users/{userId}/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Subcollection of user notifications."
+    },
+    "global_splits/{splitId}": {
+      "schema": "SplitBill",
+      "description": "Formal tracking of split bills globally (with initiator info)."
     }
   }
 }

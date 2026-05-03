@@ -1,4 +1,4 @@
-export type TransactionCategory = 'Food' | 'Transport' | 'Study' | 'Fun' | 'Income' | 'Savings' | 'Health' | 'Shopping';
+export type TransactionCategory = 'Food' | 'Transport' | 'Study' | 'Fun' | 'Income' | 'Savings' | 'Health' | 'Shopping' | 'Savings/Goal';
 
 export type TransactionType = 'expense' | 'earning' | 'saving';
 
@@ -43,11 +43,6 @@ export interface UserProfile {
   streakCount?: number;
   lastActiveDate?: string;
   badges?: string[];
-  educationROI?: {
-    semesterFees: number;
-    booksCost: number;
-    otherAcademicCosts: number;
-  };
 }
 
 export interface SplitBill {
@@ -59,12 +54,15 @@ export interface SplitBill {
   payerId: string;
 }
 
-export interface Scholarship {
+export interface Notification {
   id: string;
+  type: 'split' | 'alert' | 'info' | 'critical';
   title: string;
-  provider: string;
-  amount: number;
-  deadline: string;
-  link: string;
-  bookmarked?: boolean;
+  message: string;
+  date: string;
+  isRead: boolean;
+  senderName?: string;
+  senderId?: string;
+  amount?: number;
+  billId?: string;
 }

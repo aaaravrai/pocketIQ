@@ -7,6 +7,7 @@ import {
   query, 
   where, 
   orderBy, 
+  limit,
   setDoc, 
   addDoc, 
   updateDoc, 
@@ -15,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth } from '../lib/firebase';
-import { Transaction, Goal, Budget, UserProfile, TransactionType, TransactionCategory, SplitBill, Scholarship } from '../types';
+import { Transaction, Goal, Budget, UserProfile, TransactionType, TransactionCategory, SplitBill, Notification } from '../types';
 
 enum OperationType {
   CREATE = 'create',
@@ -61,17 +62,20 @@ interface FinancialContextType {
   dailySpent: number;
   monthlySpent: number;
   splitBills: SplitBill[];
-  scholarships: Scholarship[];
+  notifications: Notification[];
   isLoaded: boolean;
   isAuthLoading: boolean;
   addTransaction: (tx: Omit<Transaction, 'id' | 'date'>) => Promise<void>;
   addGoal: (goal: Omit<Goal, 'id'>) => Promise<void>;
   updateGoal: (id: string, update: Partial<Goal>) => Promise<void>;
   deleteGoal: (id: string) => Promise<void>;
+  fundGoal: (goalId: string, amount: number) => Promise<void>;
   updateProfile: (profile: Partial<UserProfile>) => Promise<void>;
   addSplitBill: (bill: Omit<SplitBill, 'id' | 'date' | 'payerId'>) => Promise<void>;
   settleSplitBill: (billId: string, roommateEmail: string) => Promise<void>;
-  toggleScholarshipBookmark: (scholarshipId: string) => void;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
+  sendNotification: (email: string, notification: Omit<Notification, 'id' | 'date' | 'isRead'>) => Promise<void>;
 }
 
 const FinancialContext = createContext<FinancialContextType | undefined>(undefined);
@@ -82,11 +86,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [splitBills, setSplitBills] = useState<SplitBill[]>([]);
-  const [scholarships, setScholarships] = useState<Scholarship[]>([
-    { id: '1', title: 'Future Leaders Scholarship', provider: 'Global Tech Foundation', amount: 50000, deadline: '2026-06-15', link: 'https://example.com' },
-    { id: '2', title: 'Academic Excellence Grant', provider: 'National Education Board', amount: 25000, deadline: '2026-05-20', link: 'https://example.com' },
-    { id: '3', title: 'STEM Innovation Award', provider: 'Silicon Valley Labs', amount: 75000, deadline: '2026-07-01', link: 'https://example.com' },
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
@@ -135,6 +135,10 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setTransactions(snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as Transaction));
     }, (error) => handleFirestoreError(error, OperationType.LIST, `users/${authUser.uid}/transactions`));
 
+    const unsubNotifications = onSnapshot(query(collection(db, 'users', authUser.uid, 'notifications'), orderBy('date', 'desc')), (snapshot) => {
+      setNotifications(snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as Notification));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, `users/${authUser.uid}/notifications`));
+
     const goalsQuery = collection(db, 'users', authUser.uid, 'goals');
     const unsubGoals = onSnapshot(goalsQuery, (snapshot) => {
       setGoals(snapshot.docs.map(d => ({ ...d.data(), id: d.id }) as Goal));
@@ -148,6 +152,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return () => {
       unsubProfile();
       unsubTx();
+      unsubNotifications && unsubNotifications();
       unsubGoals();
       unsubSplitBills && unsubSplitBills();
     };
@@ -155,6 +160,12 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const addTransaction = async (txData: Omit<Transaction, 'id' | 'date'>) => {
     if (!authUser || !userProfile) return;
+    
+    // Liquidity Check
+    if (txData.type === 'expense' && txData.amount > (userProfile.totalBalance || 0)) {
+      throw new Error(`Insufficient Funds! Your current balance is only ₹${(userProfile.totalBalance || 0).toFixed(2)}.`);
+    }
+
     const path = `users/${authUser.uid}/transactions`;
     try {
       const data = {
@@ -191,6 +202,43 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         lastActiveDate: today,
         badges: newBadges
       });
+
+      // --- BREACH CHECKS & NOTIFICATIONS ---
+      // 1. Low Balance
+      if (userProfile.isLowBalanceEnabled && newBalance < (userProfile.minBalanceThreshold || 0)) {
+        await addDoc(collection(db, 'users', authUser.uid, 'notifications'), {
+          type: 'critical',
+          title: 'Critical: Low Balance',
+          message: `Your balance is below your threshold: ${new Date().toLocaleTimeString()}`,
+          date: new Date().toISOString(),
+          isRead: false
+        });
+      }
+
+      // 2. Daily Limit
+      const newDailySpent = dailySpent + (txData.type === 'expense' ? txData.amount : 0);
+      if (userProfile.isDailySpendEnabled && newDailySpent > (userProfile.dailySpendLimit || 0)) {
+        await addDoc(collection(db, 'users', authUser.uid, 'notifications'), {
+          type: 'critical',
+          title: 'Critical: Daily Limit',
+          message: `You have exceeded your daily limit of ${userProfile.dailySpendLimit}.`,
+          date: new Date().toISOString(),
+          isRead: false
+        });
+      }
+
+      // 3. Monthly Budget
+      const newMonthlySpent = monthlySpent + (txData.type === 'expense' ? txData.amount : 0);
+      if (newMonthlySpent > userProfile.monthlyAllowance) {
+        await addDoc(collection(db, 'users', authUser.uid, 'notifications'), {
+          type: 'critical',
+          title: 'Critical: Over Budget',
+          message: `You have breached your monthly allowance of ${userProfile.monthlyAllowance}.`,
+          date: new Date().toISOString(),
+          isRead: false
+        });
+      }
+
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
     }
@@ -242,14 +290,59 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const addSplitBill = async (billData: Omit<SplitBill, 'id' | 'date' | 'payerId'>) => {
-    if (!authUser) return;
+    if (!authUser || !userProfile) return;
+
+    // Liquidity Check: User must be able to afford the total bill they are initiating/fronting
+    if (billData.amount > (userProfile.totalBalance || 0)) {
+      throw new Error(`Insufficient Funds! Your current balance is only ₹${(userProfile.totalBalance || 0).toFixed(2)}.`);
+    }
+
     const path = `users/${authUser.uid}/splitBills`;
     try {
-      await addDoc(collection(db, path), {
+      const splitDoc = {
         ...billData,
         date: new Date().toISOString(),
         payerId: authUser.uid
+      };
+      
+      // 1. Save to user's private splits
+      const docRef = await addDoc(collection(db, path), splitDoc);
+      
+      // 2. Save to global_splits for formal tracking
+      await addDoc(collection(db, 'global_splits'), {
+        ...splitDoc,
+        billId: docRef.id,
+        initiatedBy: userProfile.name,
+        initiatedByEmail: userProfile.email
       });
+
+      // 3. Send notifications to roommates
+      for (const roommate of billData.roommates) {
+        if (!roommate.email) continue;
+
+        // Check if roommate is a registered user
+        const usersQuery = query(collection(db, 'users'), where('email', '==', roommate.email), limit(1));
+        const userSnapshot = await getDocs(usersQuery);
+        
+        if (!userSnapshot.empty) {
+          const roommateUid = userSnapshot.docs[0].id;
+          const notificationPath = `users/${roommateUid}/notifications`;
+          await addDoc(collection(db, notificationPath), {
+            type: 'split',
+            title: 'New Split Request',
+            message: `${userProfile.name} requested ₹${roommate.amount.toFixed(2)} for ${billData.description}`,
+            date: new Date().toISOString(),
+            isRead: false,
+            senderName: userProfile.name,
+            senderId: authUser.uid,
+            amount: roommate.amount,
+            billId: docRef.id
+          });
+        } else {
+          // Mock "Theoretical Gmail/Invite Link" for non-registered users
+          console.log(`Theoretical Gmail Notification sent to ${roommate.email}: Invite Link to PocketIQ generated.`);
+        }
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
     }
@@ -267,15 +360,119 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const path = `users/${authUser.uid}/splitBills/${billId}`;
     try {
       await updateDoc(doc(db, path), { roommates: updatedRoommates });
+      
+      // Update global_splits too
+      const globalQuery = query(collection(db, 'global_splits'), where('billId', '==', billId));
+      const globalSnapshot = await getDocs(globalQuery);
+      if (!globalSnapshot.empty) {
+        await updateDoc(doc(db, 'global_splits', globalSnapshot.docs[0].id), { roommates: updatedRoommates });
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, path);
     }
   };
 
-  const toggleScholarshipBookmark = (id: string) => {
-    setScholarships(prev => prev.map(s => 
-      s.id === id ? { ...s, bookmarked: !s.bookmarked } : s
-    ));
+  const markNotificationRead = async (id: string) => {
+    if (!authUser) return;
+    const path = `users/${authUser.uid}/notifications/${id}`;
+    try {
+      await updateDoc(doc(db, path), { isRead: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, path);
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    if (!authUser || notifications.length === 0) return;
+    try {
+      const { writeBatch } = await import('firebase/firestore');
+      const batch = writeBatch(db);
+      const unreadNotifications = notifications.filter(n => !n.isRead);
+      
+      unreadNotifications.forEach(n => {
+        const ref = doc(db, 'users', authUser.uid, 'notifications', n.id);
+        batch.update(ref, { isRead: true });
+      });
+      
+      await batch.commit();
+    } catch (error) {
+      console.error("Error marking all read:", error);
+    }
+  };
+
+  const sendNotification = async (email: string, notificationData: Omit<Notification, 'id' | 'date' | 'isRead'>) => {
+    if (!authUser) return;
+    try {
+      const usersQuery = query(collection(db, 'users'), where('email', '==', email), limit(1));
+      const userSnapshot = await getDocs(usersQuery);
+      
+      if (!userSnapshot.empty) {
+        const roommateUid = userSnapshot.docs[0].id;
+        const notificationPath = `users/${roommateUid}/notifications`;
+        await addDoc(collection(db, notificationPath), {
+          ...notificationData,
+          date: new Date().toISOString(),
+          isRead: false
+        });
+      } else {
+        // Invite link theoretical trigger
+        console.log(`Theoretical Invite for ${email}: https://pocketiq.app/join?referrer=${authUser.uid}`);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `notifications_proxy/${email}`);
+    }
+  };
+
+  const fundGoal = async (goalId: string, amount: number) => {
+    if (!authUser || !userProfile) return;
+    
+    // 1. Validation
+    if (amount > (userProfile.totalBalance || 0)) {
+      throw new Error(`Insufficient balance to fund this goal. Your current balance is ₹${(userProfile.totalBalance || 0).toFixed(2)}`);
+    }
+
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) throw new Error("Goal not found");
+
+    try {
+      const { writeBatch } = await import('firebase/firestore');
+      const batch = writeBatch(db);
+
+      // 2. Update Goal currentAmount
+      const goalRef = doc(db, 'users', authUser.uid, 'goals', goalId);
+      batch.update(goalRef, { currentAmount: goal.currentAmount + amount });
+
+      // 3. Update User Balance
+      const userRef = doc(db, 'users', authUser.uid);
+      const newBalance = (userProfile.totalBalance || 0) - amount;
+      batch.update(userRef, { totalBalance: newBalance });
+
+      // 4. Record as hidden transaction
+      const txRef = doc(collection(db, 'users', authUser.uid, 'transactions'));
+      batch.set(txRef, {
+        amount,
+        category: 'Savings/Goal',
+        type: 'expense',
+        description: `Contributed to goal: ${goal.title}`,
+        date: new Date().toISOString(),
+        userId: authUser.uid
+      });
+
+      await batch.commit();
+      
+      // If target reached, send success notification
+      if (goal.currentAmount + amount >= goal.targetAmount) {
+        await addDoc(collection(db, 'users', authUser.uid, 'notifications'), {
+          type: 'info',
+          title: 'Goal Achieved! 🎉',
+          message: `Mission Accomplished: You've reached your target for "${goal.title}"!`,
+          date: new Date().toISOString(),
+          isRead: false
+        });
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `fund_goal/${goalId}`);
+    }
   };
 
   const budgets = useMemo(() => {
@@ -315,17 +512,20 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     dailySpent,
     monthlySpent,
     splitBills,
-    scholarships,
+    notifications,
     isLoaded,
     isAuthLoading,
     addTransaction,
     addGoal,
     updateGoal,
     deleteGoal,
+    fundGoal,
     updateProfile,
     addSplitBill,
     settleSplitBill,
-    toggleScholarshipBookmark
+    markNotificationRead,
+    markAllNotificationsRead,
+    sendNotification
   };
 
   return <FinancialContext.Provider value={value}>{children}</FinancialContext.Provider>;
