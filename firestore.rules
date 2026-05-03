@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Phase 4: Validation Blueprints
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['name', 'email', 'totalBalance', 'monthlyAllowance']) &&
+             data.keys().size() >= 4 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.email is string && data.email.size() < 255 &&
+             data.totalBalance is number &&
+             data.monthlyAllowance is number && data.monthlyAllowance >= 0 &&
+             (!data.keys().hasAny(['dateOfBirth']) || (data.dateOfBirth is string && data.dateOfBirth.size() <= 20));
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['amount', 'category', 'type', 'description', 'date']) &&
+             data.amount is number && data.amount > 0 &&
+             data.category is string && data.category.size() < 50 &&
+             data.type in ['expense', 'earning', 'saving'] &&
+             data.description is string && data.description.size() < 200 &&
+             data.date is string;
+    }
+
+    function isValidGoal(data) {
+      return data.keys().hasAll(['title', 'targetAmount', 'currentAmount']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 100 &&
+             data.targetAmount is number && data.targetAmount > 0 &&
+             data.currentAmount is number && data.currentAmount >= 0;
+    }
+
+    // Rules for Collections
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserProfile(incoming()) && incoming().email == request.auth.token.email;
+      allow update: if isOwner(userId) && isValidUserProfile(incoming()) && 
+                    incoming().email == existing().email && // Email is immutable
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'totalBalance', 'monthlyAllowance', 'avatar', 'onboarded', 'updatedAt', 'dateOfBirth']);
+
+      match /transactions/{transactionId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidTransaction(incoming()) && isValidId(transactionId);
+        allow update: if false; // Transactions are immutable in this flow for audit safety
+        allow delete: if isOwner(userId);
+      }
+
+      match /goals/{goalId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidGoal(incoming()) && isValidId(goalId);
+        allow update: if isOwner(userId) && isValidGoal(incoming()) &&
+                      incoming().diff(existing()).affectedKeys().hasOnly(['title', 'targetAmount', 'currentAmount', 'icon', 'color', 'deadline']);
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

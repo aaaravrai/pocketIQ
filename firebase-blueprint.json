@@ -1,0 +1,63 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Core user information and financial settings.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "avatar": { "type": "string" },
+        "dateOfBirth": { "type": "string", "format": "date" },
+        "totalBalance": { "type": "number" },
+        "monthlyAllowance": { "type": "number" },
+        "onboarded": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "totalBalance", "monthlyAllowance"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A financial record of income, expense, or savings.",
+      "type": "object",
+      "properties": {
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "type": { "type": "string", "enum": ["expense", "earning", "saving"] },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      },
+      "required": ["amount", "category", "type", "description", "date"]
+    },
+    "Goal": {
+      "title": "Goal",
+      "description": "A financial savings target.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "targetAmount": { "type": "number" },
+        "currentAmount": { "type": "number" },
+        "icon": { "type": "string" },
+        "color": { "type": "string" },
+        "deadline": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "targetAmount", "currentAmount"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Top-level user profiles."
+    },
+    "users/{userId}/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Subcollection of user transactions."
+    },
+    "users/{userId}/goals/{goalId}": {
+      "schema": "Goal",
+      "description": "Subcollection of user savings goals."
+    }
+  }
+}
